@@ -1,0 +1,40 @@
+Taken from Kaggle - https://www.kaggle.com/mateuszbuda/lgg-mri-segmentation
+
+This dataset contains brain MR images together with manual FLAIR abnormality segmentation masks.
+The images were obtained from The Cancer Imaging Archive (TCIA).
+They correspond to 110 patients included in The Cancer Genome Atlas (TCGA) lower-grade glioma collection with at least fluid-attenuated inversion recovery (FLAIR) sequence and genomic cluster data available.
+Tumor genomic clusters and patient data is provided in data.csv file.
+
+TIFF FILES -- https://stackoverflow.com/questions/7569553/working-with-tiffs-import-export-in-python-using-numpy
+
+
+Variable Descriptions --> 
+
+    - * Patient - literally what it means.                                 
+    - RNASeqCluster                                
+    - MethylationCluster
+    - miNACluster
+    - CNCluster
+    - RPPACluster 
+    - OncosignCluster 
+    - COCCluster
+    - histological_type 
+    - neoplasm_histologic_grade
+    - tumor_tissue_site
+    - laterality
+    - * tumor_location - where the tumor is located in the brain.
+    - * gendr - male or female.
+    - age_at_initial_pathologic - the age of patient when the tumor was identified.
+    - * race                                     
+    - * ethnicity                                       
+    - * death01                 
+
+https://www.ncbi.nlm.nih.gov/pmc/articles/PMC5485483/
+
+In digital image processing and computer vision, image segmentation is the process of partitioning a digital image into multiple segments (sets of pixels, also known as image objects).
+
+Tasks a CNN can accomplish:
+Classification – categorizing the entire image into a class such as “people”, “animals”, “outdoors”
+Object detection – detecting objects within an image and drawing a rectangle around them, for example, a person or a sheep.
+Segmentation – identifying parts of the image and understanding what object they belong to. Segmentation lays the basis for performing object detection and classification.
+
