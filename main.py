@@ -8,6 +8,8 @@ import numpy as np
 import scipy as sp
 import pandas as pd
 # os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
+os.environ['TF_FORCE_GPU_ALLOW_GROWTH'] = 'true'
+
 
 # ======= Visualization ========
 import matplotlib.pyplot as plt
@@ -186,6 +188,7 @@ def imagedatagenerator(df, batch_size, augmentations, target_size, highlight,
     
     image_generator = image_datagen.flow_from_dataframe(
         df, x_col = "images",
+        shuffle = False,
         class_mode = None,
         color_mode = image_color_mode,
         target_size = target_size,
@@ -196,6 +199,7 @@ def imagedatagenerator(df, batch_size, augmentations, target_size, highlight,
 
     mask_generator = mask_datagen.flow_from_dataframe(
         df, x_col = "masks",
+        shuffle = False,
         class_mode = None,
         color_mode = mask_color_mode,
         target_size = target_size,
@@ -400,20 +404,20 @@ UNet.compile(optimizer=mixed_precision_optimizer, loss=loss, metrics=metrics)
 
 # ======================= GET GENERATORS ==========================
 
-augmentations = dict(
-    rotation_range=0.25,
-    width_shift_range=0.25,
-    height_shift_range=0.25,
-    brightness_range=(0.45, 0.80),
-    fill_mode='nearest',
-    shear_range=0.1,
-    zoom_range=0.5,
-    horizontal_flip=True,
-    vertical_flip=True,
-)
+# augmentations = dict(
+#     rotation_range=0.25,
+#     width_shift_range=0.25,
+#     height_shift_range=0.25,
+#     brightness_range=(0.45, 0.80),
+#     fill_mode='nearest',
+#     shear_range=0.1,
+#     zoom_range=0.5,
+#     horizontal_flip=True,
+#     vertical_flip=True,
+# )
 
 train_generator = imagedatagenerator(train_set, batch_size, 
-                                    augmentations, target_size, highlight)
+                                    dict(), target_size, highlight)
 
 test_generator = imagedatagenerator(val_set, batch_size, 
                                     dict(), target_size, highlight)
@@ -429,5 +433,6 @@ history = UNet.fit(
     epochs = EPOCHS,
     callbacks = callbacks,
     validation_data = test_generator,
-    validation_steps = 10
+    validation_steps = 10    
 )
+
