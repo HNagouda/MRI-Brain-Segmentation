@@ -3,3 +3,7 @@ kaggle_3m
 
 # Working files
 experimentation.py
+
+# Runtime Files
+__pycache__
+.vscode
