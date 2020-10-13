@@ -18,7 +18,7 @@ from plotly.offline import init_notebook_mode
 init_notebook_mode(connected=True)
 
 # ======= Images ========
-import visualizer
+import VisualizerClass
 import cv2
 from glob import glob
 from PIL import Image
@@ -57,6 +57,9 @@ print("All libraries successfully imported.")
 # https://www.tensorflow.org/xla/tutorials/compile
 # https://neptune.ai/blog/image-segmentation-in-2020
 # https://keras.io/api/layers/
+
+# https://github.com/bnsreenu/python_for_microscopists/blob/master/074-Defining%20U-net%20in%20Python%20using%20Keras.py
+# https://github.com/bnsreenu/python_for_microscopists/blob/master/076-077-078-Unet_nuclei_tutorial.py
 # ===========================================================================================================
 # ===========================================================================================================
 
@@ -159,20 +162,21 @@ def scan_image_abnormalities(base_path, base_img_resolution, base_msk_resolution
 # =========================================== IMAGE-DATA GENERATOR ==========================================
 # -----------------------------------------------------------------------------------------------------------
 
-def normalize_and_highlight(img,mask):
+def normalize_and_highlight(highlight, img, mask):
     # Normalizing
     img = img / 255
     mask = mask / 255
 
     # Darkening/Lightening highlights 
-    mask[mask > 0.5] = 1
-    mask[mask <= 0.5] = 0
+    if highlight:
+        mask[mask > 0.5] = 1
+        mask[mask <= 0.5] = 0
     
     return (img, mask)
 
 
 # Adopted From: https://github.com/zhixuhao/unet/blob/master/data.py
-def train_generator(df, batch_size, augmentations, target_size,
+def imagedatagenerator(df, batch_size, augmentations, target_size, highlight,
                     image_color_mode="rgb", mask_color_mode="grayscale",
                     image_save_prefix="image", mask_save_prefix="mask",
                     save_to_dir=None, seed=777):
@@ -201,7 +205,7 @@ def train_generator(df, batch_size, augmentations, target_size,
         seed = seed)
     
     for (img, mask) in zip(image_generator, mask_generator):
-        img, mask = normalize_and_highlight(img, mask)
+        img, mask = normalize_and_highlight(highlight, img, mask)
         yield (img,mask)
 
 
@@ -242,12 +246,19 @@ def earlystopping():
     
     return earlystopping
 
-def get_model_callbacks(tensorboard_logs_dir, model_checkpoint_filepath):
+
+def learningratescheduler(lrschedule):
+    learningratescheduler = LearningRateScheduler(schedule=lrschedule, verbose=0)
+
+    return learningratescheduler
+
+def get_model_callbacks(tensorboard_logs_dir, model_checkpoint_filepath, lrschedule):
     callbacks = [
         reducelronplateau(),
         tensorboard(tensorboard_logs_dir),
         modelcheckpoint(model_checkpoint_filepath),
         earlystopping()
+        # learningratescheduler(lrschedule)
     ]
 
     return callbacks
@@ -266,11 +277,10 @@ def get_mixed_precision_opt(optimizer):
 # -----------------------------------------------------------------------------------------------------------
 
 def get_unet(input_shape):
-    inputs = Input((input_shape[0], input_shape[1], input_shape[2]))
-    normalized_inputs = Lambda(lambda x: x / 255)(inputs)
+    inputs = Input(input_shape)
 
     #Contraction path
-    c1 = Conv2D(16, (3, 3), activation='relu', kernel_initializer='he_normal', padding='same')(normalized_inputs)
+    c1 = Conv2D(16, (3, 3), activation='relu', kernel_initializer='he_normal', padding='same')(inputs)
     c1 = Dropout(0.1)(c1)
     c1 = Conv2D(16, (3, 3), activation='relu', kernel_initializer='he_normal', padding='same')(c1)
     p1 = MaxPooling2D((2, 2))(c1)
@@ -330,34 +340,51 @@ def get_unet(input_shape):
 # ============================================ PROJECT EXECUTION ============================================
 # -----------------------------------------------------------------------------------------------------------
 
-# ======= HYPERPARAMETERS =======
-test_size = 0.15
-val_size = 0.25
-input_shape = (256, 256, 3)
-base_img_resolution = [256, 256, 3]
-base_msk_resolution = [256, 256, 3]
+# =========================== HYPERPARAMETERS ===============================
+test_size = 0.1
+val_size = 0.2
 
+EPOCHS = 1
+highlight = True
+batch_size = 1
 learning_rate = 0.0001
-beta_1 = 0.9
-beta_2 = 0.999
-epsilon = 1e-07
-amsgrad = False
+input_shape = (256, 256, 3)
+target_size = (256, 256)
 
-loss = 'binary_cross_entropy'
+#tensorboard_logs_dir, model_checkpoint_filepath, lrschedule
+tensorboard_logs_dir = f"{base_path}/Tensorboard_Logs"
+checkpoints_name = "initialrun.hdf5"
+model_checkpoint_filepath = f"{base_path}/Model_Checkpoints/{checkpoints_name}"
+lrschedule = 0
+
+# Adam optimizer
+beta_1, beta_2 = 0.9, 0.999
+epsilon, amsgrad = 1e-07, False
+
+loss = 'binary_crossentropy'
 metrics = ['accuracy']
 
+# def scheduler(epoch, lr):
+#     if epoch < 10:
+#         return lr
+#     else:
+#         return lr * tf.math.exp(-0.1)
+
 # ===== IMAGE ABNORMALITIES =====
-abnrml_img_details, abnrml_msk_details = scan_image_abnormalities(base_path, base_img_resolution, base_msk_resolution)
+# base_img_resolution = [256, 256, 3]
+# base_msk_resolution = [256, 256, 3]
+# abnrml_img_details, abnrml_msk_details = scan_image_abnormalities(base_path, base_img_resolution, base_msk_resolution)
 
-i, h, w, c = abnrml_img_details
-i1, h1, w1, c1 = abnrml_msk_details
+# i, h, w, c = abnrml_img_details
+# i1, h1, w1, c1 = abnrml_msk_details
 
-print(f"""
-Number of abnormal images: {len(i)} 
-Number of abnormal masks: {len(i1)}
-""")
+# print(f"""
+# Number of abnormal images: {len(i)} 
+# Number of abnormal masks: {len(i1)}
+# """)
 
-# ======= MODEL COMPILING =======
+
+# ======================= MODEL COMPILING =======================
 df, train_set, test_set, val_set = make_dataset(base_path, test_size, val_size)
 
 optimizer = Adam(
@@ -370,6 +397,37 @@ mixed_precision_optimizer = get_mixed_precision_opt(optimizer)
 UNet = get_unet(input_shape)
 
 UNet.compile(optimizer=mixed_precision_optimizer, loss=loss, metrics=metrics)
-UNet.summary()
 
-# ======== MODEL TRAINING =======
+# ======================= GET GENERATORS ==========================
+
+augmentations = dict(
+    rotation_range=0.25,
+    width_shift_range=0.25,
+    height_shift_range=0.25,
+    brightness_range=(0.45, 0.80),
+    fill_mode='nearest',
+    shear_range=0.1,
+    zoom_range=0.5,
+    horizontal_flip=True,
+    vertical_flip=True,
+)
+
+train_generator = imagedatagenerator(train_set, batch_size, 
+                                    augmentations, target_size, highlight)
+
+test_generator = imagedatagenerator(val_set, batch_size, 
+                                    dict(), target_size, highlight)
+
+# ======================= RUNNING THE MODEL ======================
+
+#tensorboard_logs_dir, model_checkpoint_filepath, lrschedule
+
+callbacks = get_model_callbacks(tensorboard_logs_dir, model_checkpoint_filepath, lrschedule)
+
+history = UNet.fit(
+    train_generator,
+    epochs = EPOCHS,
+    callbacks = callbacks,
+    validation_data = test_generator,
+    validation_steps = 10
+)
