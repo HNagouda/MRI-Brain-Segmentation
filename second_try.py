@@ -52,18 +52,6 @@ from tensorflow.keras.preprocessing.image import ImageDataGenerator, array_to_im
 
 print("All libraries successfully imported.")
 
-# ===========================================================================================================
-# ===========================================================================================================
-# Reference
-# https://www.kaggle.com/monkira/brain-mri-segmentation-using-unet-keras
-# https://www.tensorflow.org/xla/tutorials/compile
-# https://neptune.ai/blog/image-segmentation-in-2020
-# https://keras.io/api/layers/
-
-# https://github.com/bnsreenu/python_for_microscopists/blob/master/074-Defining%20U-net%20in%20Python%20using%20Keras.py
-# https://github.com/bnsreenu/python_for_microscopists/blob/master/076-077-078-Unet_nuclei_tutorial.py
-# ===========================================================================================================
-# ===========================================================================================================
 
 
 # -----------------------------------------------------------------------------------------------------------
@@ -159,9 +147,9 @@ def scan_image_abnormalities(base_path, base_img_resolution, base_msk_resolution
     abnormal_mask_properties = [ab_masks, ab_msk_h, ab_msk_w, ab_msk_c]
 
     return abnormal_image_properties, abnormal_mask_properties 
-        
 
-# -----------------------------------------------------------------------------------------------------------
+
+    # -----------------------------------------------------------------------------------------------------------
 # =========================================== IMAGE-DATA GENERATOR ==========================================
 # -----------------------------------------------------------------------------------------------------------
 
@@ -243,15 +231,6 @@ def reducelronplateau():
 
     return reducelronplateau
 
-def tensorboard(logs_dir):
-    tensorboard = TensorBoard(
-        log_dir="Tensorboard_Logs", histogram_freq=0, 
-        write_graph=True, write_images=False, 
-        update_freq='epoch', profile_batch=2, 
-        embeddings_freq=0, embeddings_metadata=None)
-
-    return tensorboard
-
 def modelcheckpoint(checkpoint_filepath):
     modelcheckpoint = ModelCheckpoint(
         filepath=checkpoint_filepath, 
@@ -268,16 +247,14 @@ def earlystopping():
     
     return earlystopping
 
-def get_model_callbacks(tensorboard_logs_dir, model_checkpoint_filepath):
+def get_model_callbacks(model_checkpoint_filepath):
     callbacks = [
         reducelronplateau(),
-        tensorboard(tensorboard_logs_dir),
         modelcheckpoint(model_checkpoint_filepath),
         earlystopping()
     ]
 
     return callbacks
-
 
 # -----------------------------------------------------------------------------------------------------------
 # ============================================= MODEL OPTIMIZERS ============================================
@@ -372,108 +349,13 @@ def jac_distance(y_true, y_pred):
     y_truef=K.flatten(y_true)
     y_predf=K.flatten(y_pred)
 
-    return - iou(y_true, y_pred)
+    return -iou(y_true, y_pred)
 
 def dice_loss(y_true, y_pred):
     numerator = 2 * (tf.math.abs(tf.sets.intersection(y_true, y_pred).astype("float16")))
     denominator = tf.math.abs(y_true) + tf.math.abs(y_pred)
     diceLoss = numerator/denominator
     return diceLoss
-
-# =================================== MODEL COMPILING ===================================
-
-def compile_model():
-    # dataframes
-    df, train_set, test_set, val_set = make_dataset(base_path, test_size, val_size)
-
-    # optimizer 
-    optimizer = Adam(
-        learning_rate=learning_rate, beta_1=beta_1, beta_2=beta_2, 
-        epsilon=epsilon, amsgrad=amsgrad, name='Adam'
-    )
-
-    mixed_precision_optimizer = get_mixed_precision_opt(optimizer)
-
-    # model
-    UNet = get_unet(input_shape)
-    UNet.compile(optimizer=mixed_precision_optimizer, loss=loss, metrics=metrics)
-
-    return UNet
-
-# ================================= TRAINING ANALYSIS ===================================
-
-def export_model_stats(model_history, plot_model_stats_dir, plot_name):
-    file_path = f"{stats_dir}/{plot_name}.jpg"
-    
-    fig = make_subplots(rows=1, cols=2, 
-                        subplot_titles=['Loss', 'Accuracy'])
-
-    fig.add_trace(go.Scatter(x=np.arange(1, 11), y=model_history['loss'],
-                            mode='lines+markers', name='Loss'), 
-                            row=1, col=1)
-
-    fig.add_trace(go.Scatter(x=np.arange(1, 11), y=model_history['accuracy'],
-                            mode='lines+markers', name='Accuracy'), 
-                            row=1, col=2)
-
-    fig.update_xaxes(title_text='Epochs', row=1, col=1)
-    fig.update_xaxes(title_text='Epochs', row=1, col=2)
-        
-    fig.update_layout(title=f"Visualizing Model's Progress")
-    
-    fig.show()
-
-    fig.write_image(file_path) 
-    
-
-# =================================== MODEL TRAINING ====================================
-
-def run_model(UNet):
-
-    callbacks = get_model_callbacks(tensorboard_logs_dir, model_checkpoint_filepath)
-
-    history = UNet.fit(
-        train_generator,
-        epochs = EPOCHS,
-        # callbacks = callbacks,
-        validation_data = test_generator,
-        validation_steps = 10    
-    )
-
-    return history
-
-
-def save_model(trained_model, models_dir, model_name): 
-    trained_model = trained_model
-    trained_model.save(f"{base_path}/{models_dir}/{model_name}.hdf5")
-
-
-def load_saved_model(models_dir, model_name):
-    model = load_model(f"{base_path}/{models_dir}/{model_name}.hdf5")
-
-    return model
-
-
-# =================================== MODEL EVALUTION ===================================
-def evaluate_model(data_generator, models_dir, saved_model_name):
-    saved_model = load_saved_model(modes_dir, saved_model_name)
-
-    eval_data_generator = imagedatagenerator(test_set, batch_size, 
-                                        dict(), target_size=target_size)
-
-    scores = saved_model.evaluate(eval_data_generator, steps = len(test_set)/batch_size)
-    
-    return scores
-
-def print_scores(evaluated_scores):
-    loss = evaluated_scores[0]
-    accuracy = 100 - loss
-
-    print(f"""
-    Evaluation Loss: {loss}
-    Evaluation Accuraacy: {accuracy}
-    """)
-
 
 # -----------------------------------------------------------------------------------------------------------
 # ================================= PATHS, PARAMETERS, AND MODEL TUNING =====================================
@@ -512,53 +394,97 @@ beta_1, beta_2 = 0.9, 0.999
 epsilon, amsgrad = 1e-07, False
 
 # Loss and Metrics
-loss = dice_loss
+loss = dice_coef_loss
 metrics = ['binary_accuracy', dice_coef]
 
-# Model Accuracy Findings
-plot_model_stats_dir = f"{base_path}/Model_Stats_Plots"
+# ============================
+# dataframes
+print(f"\n {'-' * 50} \n COLLECTING DATAFRAMES... \n {'-' * 50} ")
+df, train_set, test_set, val_set = make_dataset(base_path, test_size, val_size)
+print(f"\n {'-' * 50} \n SUCCESSFULLY COLLECTED DATAFRAMES \n {'-' * 50} ")
 
-# Model Saving Paths
-models_dir = f"{base_path}/Saved_Models"
+# optimizer 
+optimizer = Adam(
+    learning_rate=learning_rate, beta_1=beta_1, beta_2=beta_2, 
+    epsilon=epsilon, amsgrad=amsgrad, name='Adam'
+)
 
+mixed_precision_optimizer = get_mixed_precision_opt(optimizer)
 
+# compiling model
+print(f"\n {'-' * 50} DEFINING U-NET... \n {'-' * 50}")
+UNet = get_unet(input_shape)
+print(f"\n {'-' * 50} U-NET SUCCESSFULLY CREATED \n {'-' * 50}")
 
-# -----------------------------------------------------------------------------------------------------------
-# ============================================ PROJECT EXECUTION ============================================
-# -----------------------------------------------------------------------------------------------------------
+print(f"\n {'-' * 50} COMPILING U-NET... \n {'-' * 50}")
+UNet.compile(optimizer=mixed_precision_optimizer, loss=loss, metrics=metrics)
+print(f"\n {'-' * 50} U-NET SUCCESSFULLY COMPILED \n {'-' * 50}")
 
-# =========================== SCANNING FOR IMAGE ABNORMALITIES ==========================
-# base_img_resolution = [256, 256, 3]
-# base_msk_resolution = [256, 256, 3]
-# abnrml_img_details, abnrml_msk_details = scan_image_abnormalities(base_path, base_img_resolution, base_msk_resolution)
-
-# i, h, w, c = abnrml_img_details
-# i1, h1, w1, c1 = abnrml_msk_details
-
-# print(f"""
-# Number of abnormal images: {len(i)} 
-# Number of abnormal masks: {len(i1)}
-# """)
-
-# ======================= GET DATAFRAMES ==========================
-df, train_set, val_set, test_set = make_dataset(base_path, test_size, val_size)
-
-# ======================= GET GENERATORS ==========================
+# Data Generator
+print(f"\n {'-' * 50} PREPARING THE IMAGE-DATA-GENERATOR")
 train_generator, test_generator = call_and_define_generators(
-                                    augment, train_set, val_set, 
-                                    batch_size, augmentations, target_size, highlight
-                                )
+    augment, train_set, val_set, batch_size, augmentations, target_size, highlight
+)
 
-# ================== COMPILING & RUNNING THE MODEL ================
-UNet = compile_model()
-UNet_history = run_model(UNet)
+# Training model
+model_checkpoint_filepath = f"{base_path}/Model_Checkpoints/{runtime_name}.hdf5"
+callbacks = get_model_callbacks(model_checkpoint_filepath)
 
-# ==================== PLOTTING & SAVING MODEL ====================
-export_model_stats(UNet_history)
+print("\n {'-' * 50} BEGINNING MODEL TRAINING... \n {'-' * 50}")
+history = UNet.fit(
+    train_generator,
+    epochs = EPOCHS,
+    # callbacks = callbacks,
+    validation_data = test_generator,
+    validation_steps = 10    
+)
 
-save_model(trained_model=UNet, models_dir=models_dir, model_name=runtime_name)
+print(f"\n {'-' * 50} MODEL SUCCESSFULLY TRAINED \n {'-' * 50}")
 
-# ======================= LOAD AND EVALUATE =======================
-model_scores = evaluate_model(data_generator, model_dir, runtime_name)
 
-print_scores(model_scores)
+# Saving Model
+model_path = f"{base_path}/{models_dir}/{runtime_name}.hdf5"
+model.save(model_path)
+
+print(f"\n {'-' * 50} MODEL SAVED TO {model_path} \n {'-' * 50}")
+
+
+# Visualizing model progress through the training loop
+plot_path = f"{model_path.split(sep='.')[0]}.jpg"
+
+history = history.history
+fig = make_subplots(rows=1, cols=2, 
+                    subplot_titles=['Loss', 'Accuracy'])
+
+fig.add_trace(go.Scatter(x=np.arange(1, 11), y=history['loss'],
+                        mode='lines+markers', name='Loss'), 
+                        row=1, col=1)
+
+fig.add_trace(go.Scatter(x=np.arange(1, 11), y=history['accuracy'],
+                        mode='lines+markers', name='Accuracy'), 
+                        row=1, col=2)
+
+fig.update_xaxes(title_text='Epochs', row=1, col=1)
+fig.update_xaxes(title_text='Epochs', row=1, col=2)
+    
+fig.update_layout(title=f"Visualizing Model's Progress")
+
+fig.write_image(plot_path) 
+
+print(f"\n {'-' * 50} PLOT OF MODEL PROGRESS SAVED AT {plot_path}")
+
+# Loading model for inference
+print(f"\n {'-' * 50} LOADING MODEL FOR EVALUATION... \n {'-' * 50}")
+trained_model = load_model(model_path, custom_objects={'dice_coef_loss': dice_coef_loss, 'iou': iou, 'dice_coef': dice_coef})
+
+eval_data_generator = imagedatagenerator(test_set, batch_size, 
+                                        dict(), target_size=target_size)
+
+print(f"\n {'-' * 50} BEGINNING MODEL EVALUATION \n {'-' * 50}")
+scores = saved_model.evaluate(eval_data_generator, steps = len(test_set)/batch_size)
+loss, iou, dice_coef = scores[0], scores[1], scores[3]
+
+print(f"{'-' * 50} MODEL SUCCESSFULLY EVALUATED ")
+print(f"Model loss: {loss}")
+print(f"Model IOU: {iou}")
+print(f"Model Dice Coefficient: {dice_coef} \n{'-' * 50}")
