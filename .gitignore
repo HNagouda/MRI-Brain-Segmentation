@@ -4,6 +4,12 @@ kaggle_3m
 # Working files
 experimentation.py
 
-# Runtime Files
+# Cache Files
 __pycache__
 .vscode
+
+# Miscellaneous
+Model_Checkpoints
+Model_Stats_Plots
+Saved_Models
+Tensorboard_Logs

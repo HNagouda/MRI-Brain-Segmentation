@@ -382,37 +382,36 @@ def dice_loss(y_true, y_pred):
 
 # =================================== MODEL COMPILING ===================================
 
-def compile_model():
-    # dataframes
-    df, train_set, test_set, val_set = make_dataset(base_path, test_size, val_size)
-
+def compile_model(enable_mixed_precision):
     # optimizer 
     optimizer = Adam(
         learning_rate=learning_rate, beta_1=beta_1, beta_2=beta_2, 
         epsilon=epsilon, amsgrad=amsgrad, name='Adam'
     )
-
-    mixed_precision_optimizer = get_mixed_precision_opt(optimizer)
+    if enable_mixed_precision:
+        optimizer = get_mixed_precision_opt(optimizer)
+    else:
+        pass
 
     # model
     UNet = get_unet(input_shape)
-    UNet.compile(optimizer=mixed_precision_optimizer, loss=loss, metrics=metrics)
+    UNet.compile(optimizer=optimizer, loss=loss, metrics=metrics)
 
     return UNet
 
 # ================================= TRAINING ANALYSIS ===================================
 
-def export_model_stats(model_history, plot_model_stats_dir, plot_name):
-    file_path = f"{stats_dir}/{plot_name}.jpg"
-    
+def export_model_stats(model_history, plot_path): 
+    history = model_history.history
+
     fig = make_subplots(rows=1, cols=2, 
                         subplot_titles=['Loss', 'Accuracy'])
 
-    fig.add_trace(go.Scatter(x=np.arange(1, 11), y=model_history['loss'],
+    fig.add_trace(go.Scatter(x=np.arange(1, 11), y=history['val_loss'],
                             mode='lines+markers', name='Loss'), 
                             row=1, col=1)
 
-    fig.add_trace(go.Scatter(x=np.arange(1, 11), y=model_history['accuracy'],
+    fig.add_trace(go.Scatter(x=np.arange(1, 11), y=history['val_binary_accuracy'],
                             mode='lines+markers', name='Accuracy'), 
                             row=1, col=2)
 
@@ -420,24 +419,32 @@ def export_model_stats(model_history, plot_model_stats_dir, plot_name):
     fig.update_xaxes(title_text='Epochs', row=1, col=2)
         
     fig.update_layout(title=f"Visualizing Model's Progress")
-    
-    fig.show()
-
-    fig.write_image(file_path) 
+    fig.write_image(plot_path) 
     
 
 # =================================== MODEL TRAINING ====================================
 
-def run_model(UNet):
+def run_model(UNet, epochs, use_callbacks):
 
     callbacks = get_model_callbacks(tensorboard_logs_dir, model_checkpoint_filepath)
 
-    history = UNet.fit(
+    if use_callbacks:
+        history = UNet.fit(
+            train_generator,
+            epochs = epochs,
+            steps_per_epoch = steps_per_epoch,
+            callbacks = callbacks,
+            validation_data = test_generator,
+            validation_steps = validation_steps    
+        )
+
+    else:
+        history = UNet.fit(
         train_generator,
-        epochs = EPOCHS,
-        # callbacks = callbacks,
+        epochs = epochs,
+        steps_per_epoch = steps_per_epoch,
         validation_data = test_generator,
-        validation_steps = 10    
+        validation_steps = validation_steps    
     )
 
     return history
@@ -445,23 +452,24 @@ def run_model(UNet):
 
 def save_model(trained_model, models_dir, model_name): 
     trained_model = trained_model
-    trained_model.save(f"{base_path}/{models_dir}/{model_name}.hdf5")
+    trained_model.save(f"{models_dir}/{model_name}.hdf5")
 
 
 def load_saved_model(models_dir, model_name):
-    model = load_model(f"{base_path}/{models_dir}/{model_name}.hdf5")
+    model = load_model(f"{models_dir}/{model_name}.hdf5", custom_objects={
+                              'dice_coef_loss': dice_coef_loss, 
+                              'iou': iou, 
+                              'dice_coef': dice_coef
+                          })
 
     return model
 
 
 # =================================== MODEL EVALUTION ===================================
 def evaluate_model(data_generator, models_dir, saved_model_name):
-    saved_model = load_saved_model(modes_dir, saved_model_name)
+    saved_model = load_saved_model(models_dir, saved_model_name)
 
-    eval_data_generator = imagedatagenerator(test_set, batch_size, 
-                                        dict(), target_size=target_size)
-
-    scores = saved_model.evaluate(eval_data_generator, steps = len(test_set)/batch_size)
+    scores = saved_model.evaluate(data_generator, steps=len(test_set)/batch_size)
     
     return scores
 
@@ -471,7 +479,7 @@ def print_scores(evaluated_scores):
 
     print(f"""
     Evaluation Loss: {loss}
-    Evaluation Accuraacy: {accuracy}
+    Evaluation Accuracy: {accuracy}
     """)
 
 
@@ -479,11 +487,11 @@ def print_scores(evaluated_scores):
 # ================================= PATHS, PARAMETERS, AND MODEL TUNING =====================================
 # -----------------------------------------------------------------------------------------------------------
 # RUNTIME NAME ***
-runtime_name = "trial1"  # MUST change this every time the code is run
+runtime_name = "First-Full-Run-No-Augment"  # MUST change this every time the code is run
 
 # Model Hyperparameters
 test_size, val_size = 0.1, 0.2
-EPOCHS = 5
+EPOCHS = 30
 batch_size = 32
 learning_rate = 0.0001
 input_shape = (256, 256, 3)
@@ -491,8 +499,11 @@ target_size = (256, 256)
 
 # Data-Generator Parameters
 highlight = True
-augment = True
-model_checkpoint_filepath = f"{base_path}/Model_Checkpoints/{runtime_name}.hdf5"
+augment = False
+use_callbacks = True
+enable_mixed_precision = True
+model_checkpoint_filepath = f"{base_path}/Model_Checkpoints/{runtime_name}_checkpoint.hdf5"
+tensorboard_logs_dir = f"{base_path}/Tensorboard_Logs"
 
 # Data-Generator Augmentations
 augmentations = dict(
@@ -512,11 +523,12 @@ beta_1, beta_2 = 0.9, 0.999
 epsilon, amsgrad = 1e-07, False
 
 # Loss and Metrics
-loss = dice_loss
+loss = dice_coef_loss
 metrics = ['binary_accuracy', dice_coef]
 
 # Model Accuracy Findings
 plot_model_stats_dir = f"{base_path}/Model_Stats_Plots"
+plot_path = f"{plot_model_stats_dir}/{runtime_name}.jpg"
 
 # Model Saving Paths
 models_dir = f"{base_path}/Saved_Models"
@@ -543,6 +555,12 @@ models_dir = f"{base_path}/Saved_Models"
 # ======================= GET DATAFRAMES ==========================
 df, train_set, val_set, test_set = make_dataset(base_path, test_size, val_size)
 
+steps_per_epoch = len(train_set) / batch_size
+validation_steps = len(val_set) / batch_size
+
+# steps_per_epoch = 2
+# validation_steps = 2
+
 # ======================= GET GENERATORS ==========================
 train_generator, test_generator = call_and_define_generators(
                                     augment, train_set, val_set, 
@@ -550,15 +568,29 @@ train_generator, test_generator = call_and_define_generators(
                                 )
 
 # ================== COMPILING & RUNNING THE MODEL ================
-UNet = compile_model()
-UNet_history = run_model(UNet)
+
+print(f"\n {'-' * 50} \nCOMPILING U-NET... \n {'-' * 50}")
+UNet = compile_model(enable_mixed_precision)
+print(f"\n {'-' * 50} \nU-NET SUCCESSFULLY COMPILED \n {'-' * 50}")
+
+print(f"\n {'-' * 50} \nBEGINNING MODEL TRAINING... \n {'-' * 50}")
+UNet_history = run_model(UNet, EPOCHS, use_callbacks)
+print(f"\n {'-' * 50} \nMODEL SUCCESSFULLY TRAINED \n {'-' * 50}")
+
 
 # ==================== PLOTTING & SAVING MODEL ====================
-export_model_stats(UNet_history)
-
 save_model(trained_model=UNet, models_dir=models_dir, model_name=runtime_name)
+print(f"\n {'-' * 50} \nMODEL SAVED TO '{models_dir}/{runtime_name}.hdf5' \n {'-' * 50}")
+
+export_model_stats(UNet_history, plot_path)
+print(f"\n {'-' * 50} \nPLOT OF MODEL PROGRESS SAVED AT {plot_path}")
 
 # ======================= LOAD AND EVALUATE =======================
-model_scores = evaluate_model(data_generator, model_dir, runtime_name)
+print(f"\n {'-' * 50} \nLOADING MODEL FOR EVALUATION... \n {'-' * 50}")
+print(f"\n {'-' * 50} \nBEGINNING MODEL EVALUATION \n {'-' * 50}")
 
-print_scores(model_scores)
+model_scores = evaluate_model(test_generator, models_dir, runtime_name)
+print(f"{'-' * 50} \nMODEL SUCCESSFULLY EVALUATED ")
+print(f"Model loss: {model_scores[0]}")
+print(f"Model IOU: {model_scores[1]}")
+print(f"Model Dice Coefficient: {model_scores[2]} \n{'-' * 50}")
