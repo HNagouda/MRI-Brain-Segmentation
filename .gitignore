@@ -10,6 +10,5 @@ __pycache__
 
 # Miscellaneous
 Model_Checkpoints
-Model_Stats_Plots
 Saved_Models
 Tensorboard_Logs

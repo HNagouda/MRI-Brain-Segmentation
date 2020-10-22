@@ -350,6 +350,148 @@ def get_unet(input_shape):
 
     return UNet
 
+# tf.compat.v1.disable_eager_execution() 
+
+def custom_build_1(input_shape):
+    
+    model = Sequential(name="custom_build_1")
+
+    model.add(Conv2D(16, (3, 3), input_shape=input_shape, padding='same'))
+    model.add(Activation(relu))
+    model.add(BatchNormalization(axis=-1))
+    model.add(MaxPooling2D(pool_size=(2, 2), strides=(2, 2)))
+    model.add(Dropout(0.25))
+
+    model.add(Conv2D(32, (3, 3), padding='same'))
+    model.add(Activation(relu))
+    model.add(BatchNormalization(axis=-1))
+    model.add(MaxPooling2D(pool_size=(2, 2), strides=(2, 2)))
+    model.add(Dropout(0.25))
+
+    model.add(Conv2D(64, (3, 3), padding='same'))
+    model.add(Activation(relu))
+    model.add(BatchNormalization(axis=-1))
+    model.add(MaxPooling2D(pool_size=(2, 2), strides=(2, 2)))
+    model.add(Dropout(0.25))
+
+    model.add(Conv2D(128, (3, 3), padding='same'))
+    model.add(Activation(relu))
+    model.add(BatchNormalization(axis=-1))
+    model.add(MaxPooling2D(pool_size=(2, 2), strides=(2, 2)))
+    model.add(Dropout(0.25))
+
+    model.add(Conv2D(256, (3, 3), padding='same'))
+    model.add(Activation(relu))
+    model.add(BatchNormalization(axis=-1))
+    model.add(MaxPooling2D(pool_size=(2, 2), strides=(2, 2)))
+    model.add(Dropout(0.25))
+
+    model.add(Conv2DTranspose(256, (2, 2), strides=(2, 2), padding='same'))
+    model.add(Activation(relu))
+    model.add(BatchNormalization(axis=-1))
+    model.add(Dropout(0.25))
+
+    model.add(Conv2DTranspose(128, (2, 2), strides=(2, 2), padding='same'))
+    model.add(Activation(relu))
+    model.add(BatchNormalization(axis=-1))
+    model.add(Dropout(0.25))
+
+    model.add(Conv2DTranspose(64, (2, 2), strides=(2, 2), padding='same'))
+    model.add(Activation(relu))
+    model.add(BatchNormalization(axis=-1))
+    model.add(Dropout(0.25))
+
+    model.add(Conv2DTranspose(32, (2, 2), strides=(2, 2), padding='same'))
+    model.add(Activation(relu))
+    model.add(BatchNormalization(axis=-1))
+    model.add(Dropout(0.25))
+
+    model.add(Conv2DTranspose(16, (2, 2), strides=(2, 2), padding='same'))
+    model.add(Activation(relu))
+    model.add(BatchNormalization(axis=-1))
+    model.add(Dropout(0.25))
+
+    model.add(Conv2D(1, (1, 1)))
+    model.add(Activation(sigmoid))
+    
+    return model
+
+def custom_build_2(input_shape):
+    
+    model = Sequential(name="custom_build_1")
+
+    model.add(Conv2D(16, (3, 3), input_shape=input_shape, padding='same'))
+    model.add(Activation(relu))
+    model.add(BatchNormalization(axis=-1))
+    model.add(MaxPooling2D(pool_size=(2, 2), strides=(2, 2)))
+    model.add(Dropout(0.25))
+
+    model.add(Conv2D(32, (3, 3), padding='same'))
+    model.add(Activation(relu))
+    model.add(BatchNormalization(axis=-1))
+    model.add(MaxPooling2D(pool_size=(2, 2), strides=(2, 2)))
+    model.add(Dropout(0.25))
+
+    model.add(Conv2D(64, (3, 3), padding='same'))
+    model.add(Activation(relu))
+    model.add(BatchNormalization(axis=-1))
+    model.add(MaxPooling2D(pool_size=(2, 2), strides=(2, 2)))
+    model.add(Dropout(0.25))
+
+    model.add(Conv2D(128, (3, 3), padding='same'))
+    model.add(Activation(relu))
+    model.add(BatchNormalization(axis=-1))
+    model.add(MaxPooling2D(pool_size=(2, 2), strides=(2, 2)))
+    model.add(Dropout(0.25))
+
+    model.add(Conv2D(256, (3, 3), padding='same'))
+    model.add(Activation(relu))
+    model.add(BatchNormalization(axis=-1))
+    model.add(MaxPooling2D(pool_size=(2, 2), strides=(2, 2)))
+    model.add(Dropout(0.25))
+
+    model.add(Conv2D(512, (3, 3), padding='same'))
+    model.add(Activation(relu))
+    model.add(BatchNormalization(axis=-1))
+    model.add(MaxPooling2D(pool_size=(2, 2), strides=(2, 2)))
+    model.add(Dropout(0.25))
+
+    model.add(Conv2DTranspose(512, (2, 2), strides=(2, 2), padding='same'))
+    model.add(Activation(relu))
+    model.add(BatchNormalization(axis=-1))
+    model.add(Dropout(0.25))
+
+    model.add(Conv2DTranspose(256, (2, 2), strides=(2, 2), padding='same'))
+    model.add(Activation(relu))
+    model.add(BatchNormalization(axis=-1))
+    model.add(Dropout(0.25))
+
+    model.add(Conv2DTranspose(128, (2, 2), strides=(2, 2), padding='same'))
+    model.add(Activation(relu))
+    model.add(BatchNormalization(axis=-1))
+    model.add(Dropout(0.25))
+
+    model.add(Conv2DTranspose(64, (2, 2), strides=(2, 2), padding='same'))
+    model.add(Activation(relu))
+    model.add(BatchNormalization(axis=-1))
+    model.add(Dropout(0.25))
+
+    model.add(Conv2DTranspose(32, (2, 2), strides=(2, 2), padding='same'))
+    model.add(Activation(relu))
+    model.add(BatchNormalization(axis=-1))
+    model.add(Dropout(0.25))
+
+    model.add(Conv2DTranspose(16, (2, 2), strides=(2, 2), padding='same'))
+    model.add(Activation(relu))
+    model.add(BatchNormalization(axis=-1))
+    model.add(Dropout(0.25))
+
+    model.add(Conv2D(1, (1, 1)))
+    model.add(Activation(sigmoid))
+    
+    return model
+
+
 # =================================== CUSTOM LOSSES AND METRICS ==========================
 smooth=100
 
@@ -382,7 +524,7 @@ def dice_loss(y_true, y_pred):
 
 # =================================== MODEL COMPILING ===================================
 
-def compile_model(enable_mixed_precision):
+def compile_model(model, enable_mixed_precision):
     # optimizer 
     optimizer = Adam(
         learning_rate=learning_rate, beta_1=beta_1, beta_2=beta_2, 
@@ -392,9 +534,9 @@ def compile_model(enable_mixed_precision):
         optimizer = get_mixed_precision_opt(optimizer)
     else:
         pass
-
+        
     # model
-    UNet = get_unet(input_shape)
+    UNet = model(input_shape)
     UNet.compile(optimizer=optimizer, loss=loss, metrics=metrics)
 
     return UNet
@@ -487,11 +629,11 @@ def print_scores(evaluated_scores):
 # ================================= PATHS, PARAMETERS, AND MODEL TUNING =====================================
 # -----------------------------------------------------------------------------------------------------------
 # RUNTIME NAME ***
-runtime_name = "First-Full-Run-No-Augment"  # MUST change this every time the code is run
+runtime_name = "Custom Model 2 Trial 1 (10 epochs, No callbacks)"  # MUST change this every time the code is run
 
 # Model Hyperparameters
 test_size, val_size = 0.1, 0.2
-EPOCHS = 30
+EPOCHS = 10
 batch_size = 32
 learning_rate = 0.0001
 input_shape = (256, 256, 3)
@@ -500,7 +642,7 @@ target_size = (256, 256)
 # Data-Generator Parameters
 highlight = True
 augment = False
-use_callbacks = True
+use_callbacks = False
 enable_mixed_precision = True
 model_checkpoint_filepath = f"{base_path}/Model_Checkpoints/{runtime_name}_checkpoint.hdf5"
 tensorboard_logs_dir = f"{base_path}/Tensorboard_Logs"
@@ -569,28 +711,29 @@ train_generator, test_generator = call_and_define_generators(
 
 # ================== COMPILING & RUNNING THE MODEL ================
 
-print(f"\n {'-' * 50} \nCOMPILING U-NET... \n {'-' * 50}")
-UNet = compile_model(enable_mixed_precision)
-print(f"\n {'-' * 50} \nU-NET SUCCESSFULLY COMPILED \n {'-' * 50}")
+print(f"\n{'-' * 50} \nCOMPILING U-NET... \n {'-' * 50}")
+UNet = compile_model(custom_build_2, enable_mixed_precision)
+print(f"\n{'-' * 50} \nU-NET SUCCESSFULLY COMPILED \n {'-' * 50}")
 
-print(f"\n {'-' * 50} \nBEGINNING MODEL TRAINING... \n {'-' * 50}")
+print(f"\n{'-' * 50} \nBEGINNING MODEL TRAINING... \n {'-' * 50}")
 UNet_history = run_model(UNet, EPOCHS, use_callbacks)
-print(f"\n {'-' * 50} \nMODEL SUCCESSFULLY TRAINED \n {'-' * 50}")
+print(f"\n{'-' * 50} \nMODEL SUCCESSFULLY TRAINED \n {'-' * 50}")
 
 
 # ==================== PLOTTING & SAVING MODEL ====================
 save_model(trained_model=UNet, models_dir=models_dir, model_name=runtime_name)
-print(f"\n {'-' * 50} \nMODEL SAVED TO '{models_dir}/{runtime_name}.hdf5' \n {'-' * 50}")
+print(f"\n{'-' * 50} \nMODEL SAVED TO '{models_dir}/{runtime_name}.hdf5' \n {'-' * 50}")
 
 export_model_stats(UNet_history, plot_path)
-print(f"\n {'-' * 50} \nPLOT OF MODEL PROGRESS SAVED AT {plot_path}")
+print(f"\n{'-' * 50} \nPLOT OF MODEL PROGRESS SAVED AT {plot_path}")
 
 # ======================= LOAD AND EVALUATE =======================
-print(f"\n {'-' * 50} \nLOADING MODEL FOR EVALUATION... \n {'-' * 50}")
-print(f"\n {'-' * 50} \nBEGINNING MODEL EVALUATION \n {'-' * 50}")
+print(f"\n{'-' * 50} \nLOADING MODEL FOR EVALUATION... \n {'-' * 50}")
+print(f"\n{'-' * 50} \nBEGINNING MODEL EVALUATION \n {'-' * 50}")
 
 model_scores = evaluate_model(test_generator, models_dir, runtime_name)
 print(f"{'-' * 50} \nMODEL SUCCESSFULLY EVALUATED ")
+
 print(f"Model loss: {model_scores[0]}")
 print(f"Model IOU: {model_scores[1]}")
 print(f"Model Dice Coefficient: {model_scores[2]} \n{'-' * 50}")
