@@ -127,7 +127,6 @@ def scan_image_abnormalities(base_path, base_img_resolution, base_msk_resolution
         base_path ([str]): [parent directory - the directory above the dataset dir]
         base_img_resolution([list]): [list in format - [height, width, channel] ]
         base_msk_resolution([list]): [list in format - [height, width, channel] ]
-
     Returns:
         [abnormal_image_properties]: [list of abnormal images and their heights, widths, and channels]
         [abnormal_mask_properties]: [list of abnormal masks and their heights, widths, and channels]
@@ -291,7 +290,7 @@ def get_mixed_precision_opt(optimizer):
 # ========================================= IMAGE SEGMENTATION MODEL ========================================
 # -----------------------------------------------------------------------------------------------------------
 
-def Unet(input_shape):
+def get_unet(input_shape):
     inputs = Input(input_shape)
 
     #Contraction path
@@ -318,7 +317,7 @@ def Unet(input_shape):
     c5 = Conv2D(256, (3, 3), activation='relu', kernel_initializer='he_normal', padding='same')(p4)
     c5 = Dropout(0.3)(c5)
     c5 = Conv2D(256, (3, 3), activation='relu', kernel_initializer='he_normal', padding='same')(c5)
-    
+
     #Expansive path 
     u6 = Conv2DTranspose(128, (2, 2), strides=(2, 2), padding='same')(c5)
     u6 = concatenate([u6, c4])
@@ -343,12 +342,14 @@ def Unet(input_shape):
     c9 = Conv2D(16, (3, 3), activation='relu', kernel_initializer='he_normal', padding='same')(u9)
     c9 = Dropout(0.1)(c9)
     c9 = Conv2D(16, (3, 3), activation='relu', kernel_initializer='he_normal', padding='same')(c9)
-
+    
     outputs = Conv2D(1, (1, 1), activation='sigmoid')(c9)
     
     UNet = tf.keras.Model(inputs=[inputs], outputs=[outputs])
 
     return UNet
+
+# tf.compat.v1.disable_eager_execution() 
 
 def custom_build_1(input_shape):
     
@@ -489,116 +490,6 @@ def custom_build_2(input_shape):
     
     return model
 
-def WNet(input_shape):
-    inputs = Input(input_shape)
-
-    #Contraction path
-    c1 = Conv2D(16, (3, 3), activation='relu', kernel_initializer='he_normal', padding='same')(inputs)
-    c1 = Dropout(0.1)(c1)
-    c1 = Conv2D(16, (3, 3), activation='relu', kernel_initializer='he_normal', padding='same')(c1)
-    p1 = MaxPooling2D((2, 2))(c1)
-
-    c2 = Conv2D(32, (3, 3), activation='relu', kernel_initializer='he_normal', padding='same')(p1)
-    c2 = Dropout(0.1)(c2)
-    c2 = Conv2D(32, (3, 3), activation='relu', kernel_initializer='he_normal', padding='same')(c2)
-    p2 = MaxPooling2D((2, 2))(c2)
-    
-    c3 = Conv2D(64, (3, 3), activation='relu', kernel_initializer='he_normal', padding='same')(p2)
-    c3 = Dropout(0.2)(c3)
-    c3 = Conv2D(64, (3, 3), activation='relu', kernel_initializer='he_normal', padding='same')(c3)
-    p3 = MaxPooling2D((2, 2))(c3)
-    
-    c4 = Conv2D(128, (3, 3), activation='relu', kernel_initializer='he_normal', padding='same')(p3)
-    c4 = Dropout(0.2)(c4)
-    c4 = Conv2D(128, (3, 3), activation='relu', kernel_initializer='he_normal', padding='same')(c4)
-    p4 = MaxPooling2D(pool_size=(2, 2))(c4)
-    
-    c5 = Conv2D(256, (3, 3), activation='relu', kernel_initializer='he_normal', padding='same')(p4)
-    c5 = Dropout(0.3)(c5)
-    c5 = Conv2D(256, (3, 3), activation='relu', kernel_initializer='he_normal', padding='same')(c5)
-    
-    #Expansive path 
-    u6 = Conv2DTranspose(128, (2, 2), strides=(2, 2), padding='same')(c5)
-    u6 = concatenate([u6, c4])
-    c6 = Conv2D(128, (3, 3), activation='relu', kernel_initializer='he_normal', padding='same')(u6)
-    c6 = Dropout(0.2)(c6)
-    c6 = Conv2D(128, (3, 3), activation='relu', kernel_initializer='he_normal', padding='same')(c6)
-    
-    u7 = Conv2DTranspose(64, (2, 2), strides=(2, 2), padding='same')(c6)
-    u7 = concatenate([u7, c3])
-    c7 = Conv2D(64, (3, 3), activation='relu', kernel_initializer='he_normal', padding='same')(u7)
-    c7 = Dropout(0.2)(c7)
-    c7 = Conv2D(64, (3, 3), activation='relu', kernel_initializer='he_normal', padding='same')(c7)
-    
-    u8 = Conv2DTranspose(32, (2, 2), strides=(2, 2), padding='same')(c7)
-    u8 = concatenate([u8, c2])
-    c8 = Conv2D(32, (3, 3), activation='relu', kernel_initializer='he_normal', padding='same')(u8)
-    c8 = Dropout(0.1)(c8)
-    c8 = Conv2D(32, (3, 3), activation='relu', kernel_initializer='he_normal', padding='same')(c8)
-    
-    u9 = Conv2DTranspose(16, (2, 2), strides=(2, 2), padding='same')(c8)
-    u9 = concatenate([u9, c1], axis=3)
-    c9 = Conv2D(16, (3, 3), activation='relu', kernel_initializer='he_normal', padding='same')(u9)
-    c9 = Dropout(0.1)(c9)
-    c9 = Conv2D(16, (3, 3), activation='relu', kernel_initializer='he_normal', padding='same')(c9)
-
-    # ============================================================================================
-
-    #Contraction path
-    cc1 = Conv2D(16, (3, 3), activation='relu', kernel_initializer='he_normal', padding='same')(c9)
-    cc1 = Dropout(0.1)(cc1)
-    cc1 = Conv2D(16, (3, 3), activation='relu', kernel_initializer='he_normal', padding='same')(cc1)
-    pp1 = MaxPooling2D((2, 2))(cc1)
-
-    cc2 = Conv2D(32, (3, 3), activation='relu', kernel_initializer='he_normal', padding='same')(pp1)
-    cc2 = Dropout(0.1)(cc2)
-    cc2 = Conv2D(32, (3, 3), activation='relu', kernel_initializer='he_normal', padding='same')(cc2)
-    pp2 = MaxPooling2D((2, 2))(cc2)
-    
-    cc3 = Conv2D(64, (3, 3), activation='relu', kernel_initializer='he_normal', padding='same')(pp2)
-    cc3 = Dropout(0.2)(cc3)
-    cc3 = Conv2D(64, (3, 3), activation='relu', kernel_initializer='he_normal', padding='same')(cc3)
-    pp3 = MaxPooling2D((2, 2))(cc3)
-    
-    cc4 = Conv2D(128, (3, 3), activation='relu', kernel_initializer='he_normal', padding='same')(pp3)
-    cc4 = Dropout(0.2)(cc4)
-    cc4 = Conv2D(128, (3, 3), activation='relu', kernel_initializer='he_normal', padding='same')(cc4)
-    pp4 = MaxPooling2D(pool_size=(2, 2))(cc4)
-    
-    cc5 = Conv2D(256, (3, 3), activation='relu', kernel_initializer='he_normal', padding='same')(pp4)
-    cc5 = Dropout(0.3)(cc5)
-    cc5 = Conv2D(256, (3, 3), activation='relu', kernel_initializer='he_normal', padding='same')(cc5)
-    
-    #Expansive path 
-    uu6 = Conv2DTranspose(128, (2, 2), strides=(2, 2), padding='same')(cc5)
-    uu6 = concatenate([uu6, cc4])
-    cc6 = Conv2D(128, (3, 3), activation='relu', kernel_initializer='he_normal', padding='same')(uu6)
-    cc6 = Dropout(0.2)(cc6)
-    cc6 = Conv2D(128, (3, 3), activation='relu', kernel_initializer='he_normal', padding='same')(cc6)
-    
-    uu7 = Conv2DTranspose(64, (2, 2), strides=(2, 2), padding='same')(cc6)
-    uu7 = concatenate([uu7, cc3])
-    cc7 = Conv2D(64, (3, 3), activation='relu', kernel_initializer='he_normal', padding='same')(uu7)
-    cc7 = Dropout(0.2)(cc7)
-    cc7 = Conv2D(64, (3, 3), activation='relu', kernel_initializer='he_normal', padding='same')(cc7)
-    
-    uu8 = Conv2DTranspose(32, (2, 2), strides=(2, 2), padding='same')(cc7)
-    uu8 = concatenate([uu8, cc2])
-    cc8 = Conv2D(32, (3, 3), activation='relu', kernel_initializer='he_normal', padding='same')(uu8)
-    cc8 = Dropout(0.1)(cc8)
-    cc8 = Conv2D(32, (3, 3), activation='relu', kernel_initializer='he_normal', padding='same')(cc8)
-    
-    uu9 = Conv2DTranspose(16, (2, 2), strides=(2, 2), padding='same')(cc8)
-    uu9 = concatenate([uu9, cc1], axis=3)
-    cc9 = Conv2D(16, (3, 3), activation='relu', kernel_initializer='he_normal', padding='same')(uu9)
-    cc9 = Dropout(0.1)(cc9)
-    cc9 = Conv2D(16, (3, 3), activation='relu', kernel_initializer='he_normal', padding='same')(cc9)
-    
-    outputs = Conv2D(1, (1, 1), activation='sigmoid')(cc9)
-    
-    WNet = tf.keras.Model(inputs=[inputs], outputs=[outputs])
-
-    return WNet
 
 # =================================== CUSTOM LOSSES AND METRICS ==========================
 smooth=100
@@ -644,9 +535,10 @@ def compile_model(model, enable_mixed_precision):
         pass
         
     # model
-    model.compile(optimizer=optimizer, loss=loss, metrics=metrics)
+    UNet = model(input_shape)
+    UNet.compile(optimizer=optimizer, loss=loss, metrics=metrics)
 
-    return model
+    return UNet
 
 # ================================= TRAINING ANALYSIS ===================================
 
@@ -736,7 +628,7 @@ def print_scores(evaluated_scores):
 # ================================= PATHS, PARAMETERS, AND MODEL TUNING =====================================
 # -----------------------------------------------------------------------------------------------------------
 # RUNTIME NAME ***
-runtime_name = "WNet Trial 1 (10 epochs, No callbacks)"  # MUST change this every time the code is run
+runtime_name = "Custom Model 2 Trial 1 (10 epochs, No callbacks)"  # MUST change this every time the code is run
 
 # Model Hyperparameters
 test_size, val_size = 0.1, 0.2
@@ -748,7 +640,7 @@ target_size = (256, 256)
 
 # Data-Generator Parameters
 highlight = True
-augment = True
+augment = False
 use_callbacks = False
 enable_mixed_precision = True
 model_checkpoint_filepath = f"{base_path}/Model_Checkpoints/{runtime_name}_checkpoint.hdf5"
@@ -819,7 +711,7 @@ train_generator, test_generator = call_and_define_generators(
 # ================== COMPILING & RUNNING THE MODEL ================
 
 print(f"\n{'-' * 50} \nCOMPILING U-NET... \n {'-' * 50}")
-Model = compile_model(WNet(input_shape), enable_mixed_precision)
+Model = compile_model(custom_build_2, enable_mixed_precision)
 print(f"\n{'-' * 50} \nU-NET SUCCESSFULLY COMPILED \n {'-' * 50}")
 
 print(f"\n{'-' * 50} \nBEGINNING MODEL TRAINING... \n {'-' * 50}")
