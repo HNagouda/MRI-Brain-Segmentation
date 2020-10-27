@@ -7,6 +7,8 @@ experimentation.py
 # Cache Files
 __pycache__
 .vscode
+.idea
+.vs
 
 # Miscellaneous
 Model_Checkpoints
